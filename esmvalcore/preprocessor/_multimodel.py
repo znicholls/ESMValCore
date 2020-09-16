@@ -436,6 +436,11 @@ def multi_model_statistics(products, span, statistics, output_products=None):
         statistic_cube.data = np.ma.array(statistic_cube.data,
                                           dtype=np.dtype('float32'))
 
+        # Add coordinate bounds
+        for coord in statistic_cube.coords(dim_coords=True):
+            if not coord.has_bounds():
+                coord.guess_bounds()
+
         if output_products:
             # Add to output product and log provenance
             statistic_product = output_products[statistic]
