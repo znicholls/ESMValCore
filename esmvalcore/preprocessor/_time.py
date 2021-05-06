@@ -17,6 +17,8 @@ import iris.util
 import numpy as np
 from iris.time import PartialDateTime
 
+from esmvalcore.cmor.check import _get_time_bounds
+
 from ._shared import get_iris_analysis_operation, operator_accept_weights
 
 logger = logging.getLogger(__name__)
@@ -146,6 +148,11 @@ def extract_season(cube, season):
     -------
     iris.cube.Cube
         data cube for specified season.
+
+    Raises
+    ------
+    ValueError
+        if requested season is not present in the cube
     """
     season = season.upper()
 
@@ -156,19 +163,28 @@ def extract_season(cube, season):
     sstart = allmonths.index(season)
     res_season = allmonths[sstart + len(season):sstart + 12]
     seasons = [season, res_season]
+    coords_to_remove = []
 
     if not cube.coords('clim_season'):
         iris.coord_categorisation.add_season(cube,
                                              'time',
                                              name='clim_season',
                                              seasons=seasons)
+        coords_to_remove.append('clim_season')
+
     if not cube.coords('season_year'):
         iris.coord_categorisation.add_season_year(cube,
                                                   'time',
                                                   name='season_year',
                                                   seasons=seasons)
+        coords_to_remove.append('season_year')
 
-    return cube.extract(iris.Constraint(clim_season=season))
+    result = cube.extract(iris.Constraint(clim_season=season))
+    for coord in coords_to_remove:
+        cube.remove_coord(coord)
+    if result is None:
+        raise ValueError(f'Season {season!r} not present in cube {cube}')
+    return result
 
 
 def extract_month(cube, month):
@@ -185,6 +201,11 @@ def extract_month(cube, month):
     -------
     iris.cube.Cube
         data cube for specified month.
+
+    Raises
+    ------
+    ValueError
+        if requested month is not present in the cube
     """
     if month not in range(1, 13):
         raise ValueError('Please provide a month number between 1 and 12.')
@@ -192,7 +213,10 @@ def extract_month(cube, month):
         iris.coord_categorisation.add_month_number(cube,
                                                    'time',
                                                    name='month_number')
-    return cube.extract(iris.Constraint(month_number=month))
+    result = cube.extract(iris.Constraint(month_number=month))
+    if result is None:
+        raise ValueError(f'Month {month!r} not present in cube {cube}')
+    return result
 
 
 def get_time_weights(cube):
@@ -718,7 +742,7 @@ def regrid_time(cube, frequency):
 
     # uniformize bounds
     cube.coord('time').bounds = None
-    cube.coord('time').guess_bounds()
+    cube.coord('time').bounds = _get_time_bounds(cube.coord('time'), frequency)
 
     # remove aux coords that will differ
     reset_aux = ['day_of_month', 'day_of_year']

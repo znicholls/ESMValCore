@@ -385,8 +385,9 @@ class TestCMORCheck(unittest.TestCase):
     def test_check_missing_coord_strict_flag(self):
         """Test check fails for missing coord other than lat and lon
          with --cmor-check strict"""
-        self.var_info.coordinates = {'height2m': CoordinateInfoMock('height2m')
-                                     }
+        self.var_info.coordinates.update(
+            {'height2m': CoordinateInfoMock('height2m')}
+        )
         self._check_fails_in_metadata(automatic_fixes=False)
 
     def test_check_bad_var_standard_name_relaxed_flag(self):
@@ -461,8 +462,9 @@ class TestCMORCheck(unittest.TestCase):
     def test_check_missing_coord_relaxed_flag(self):
         """Test check reports warning for missing coord other than lat and lon
         with --cmor-check relaxed"""
-        self.var_info.coordinates = {'height2m': CoordinateInfoMock('height2m')
-                                     }
+        self.var_info.coordinates.update(
+            {'height2m': CoordinateInfoMock('height2m')}
+        )
         self._check_warnings_on_metadata(automatic_fixes=False,
                                          check_level=CheckLevels.RELAXED)
 
@@ -541,8 +543,9 @@ class TestCMORCheck(unittest.TestCase):
     def test_check_missing_coord_none_flag(self):
         """Test check reports warning for missing coord other than lat, lon and
         time with --cmor-check ignore"""
-        self.var_info.coordinates = {'height2m': CoordinateInfoMock('height2m')
-                                     }
+        self.var_info.coordinates.update(
+            {'height2m': CoordinateInfoMock('height2m')}
+        )
         self._check_warnings_on_metadata(automatic_fixes=False,
                                          check_level=CheckLevels.IGNORE)
 
@@ -616,6 +619,23 @@ class TestCMORCheck(unittest.TestCase):
         self._update_coordinate_values(self.cube, coord, values)
         self._check_fails_in_metadata()
 
+    def test_non_increasing_fix(self):
+        """Check automatic fix for direction."""
+        coord = self.cube.coord('latitude')
+        values = np.linspace(
+            coord.points[-1],
+            coord.points[0],
+            len(coord.points)
+        )
+        self._update_coordinate_values(self.cube, coord, values)
+        self._check_cube(automatic_fixes=True)
+        self._check_cube()
+        # test bounds are contiguous
+        bounds = self.cube.coord('latitude').bounds
+        right_bounds = bounds[:-2, 1]
+        left_bounds = bounds[1:-1, 0]
+        self.assertTrue(np.all(left_bounds == right_bounds))
+
     def test_non_decreasing(self):
         """Fail in metadata if decreasing coordinate is increasing."""
         self.var_info.coordinates['lat'].stored_direction = 'decreasing'
@@ -636,6 +656,11 @@ class TestCMORCheck(unittest.TestCase):
         for index in range(20):
             self.assertTrue(
                 iris.util.approx_equal(cube_points[index], reference[index]))
+        # test bounds are contiguous
+        bounds = self.cube.coord('latitude').bounds
+        right_bounds = bounds[:-2, 1]
+        left_bounds = bounds[1:-1, 0]
+        self.assertTrue(np.all(left_bounds == right_bounds))
 
     def test_not_bounds(self):
         """Warning if bounds are not available."""
@@ -665,6 +690,15 @@ class TestCMORCheck(unittest.TestCase):
         """Test automatic fixes for bad longitudes."""
         self.cube = self.cube.intersection(longitude=(-180., 180.))
         self._check_cube(automatic_fixes=True)
+
+    def test_lons_automatic_fix_with_bounds(self):
+        """Test automatic fixes for bad longitudes with added bounds."""
+        self.cube.coord('longitude').bounds = None
+        self.cube = self.cube.intersection(longitude=(-180., 180.))
+        self._check_cube(automatic_fixes=True)
+        self.assertTrue(self.cube.coord('longitude').points.min() >= 0.)
+        self.assertTrue(self.cube.coord('longitude').points.max() <= 360.)
+        self.assertTrue(self.cube.coord('longitude').has_bounds())
 
     def test_high_lons_automatic_fix(self):
         """Test automatic fixes for high longitudes."""
@@ -932,6 +966,29 @@ class TestCMORCheck(unittest.TestCase):
         """Fail at metadata if frequency is not supported."""
         self._check_fails_in_metadata(frequency='wrong_freq')
 
+    def test_time_bounds(self):
+        """Test time bounds are guessed for all frequencies"""
+        freqs = ['hr', '3hr', '6hr', 'day', 'mon', 'yr', 'dec']
+        guessed = []
+        for freq in freqs:
+            cube = self.get_cube(self.var_info, frequency=freq)
+            cube.coord('time').bounds = None
+            self.cube = cube
+            self._check_cube(automatic_fixes=True, frequency=freq)
+            if cube.coord('time').bounds is not None:
+                guessed.append(True)
+        assert len(guessed) == len(freqs)
+
+    def test_no_time_bounds(self):
+        """Test time bounds are not guessed for instantaneous data"""
+        self.var_info.coordinates['time'].must_have_bounds = 'no'
+        self.var_info.coordinates['time1'] = (
+            self.var_info.coordinates.pop('time'))
+        self.cube.coord('time').bounds = None
+        self._check_cube(automatic_fixes=True)
+        guessed_bounds = self.cube.coord('time').bounds
+        assert guessed_bounds is None
+
     def _check_fails_on_data(self):
         checker = CMORCheck(self.cube, self.var_info)
         checker.check_metadata()
@@ -1130,7 +1187,13 @@ class TestCMORCheck(unittest.TestCase):
             delta = 30
         elif frequency == 'day':
             delta = 1
-        elif frequency.ends_with('hr'):
+        elif frequency == 'yr':
+            delta = 360
+        elif frequency == 'dec':
+            delta = 3600
+        elif frequency.endswith('hr'):
+            if frequency == 'hr':
+                frequency = '1hr'
             delta = float(frequency[:-2]) / 24
         else:
             raise Exception('Frequency {} not supported'.format(frequency))
