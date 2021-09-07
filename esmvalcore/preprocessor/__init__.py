@@ -324,16 +324,21 @@ def get_step_blocks(steps, order):
 
 class PreprocessorFile(TrackedFile):
     """Preprocessor output file."""
+
     def __init__(self, attributes, settings, ancestors=None):
+        ancestors = [] if ancestors is None else ancestors
+        self.files = [a.filename if isinstance(a, TrackedFile) else a
+                      for a in ancestors]
+        if 'add_fx_variables' in settings:
+            for fx_variable in settings['add_fx_variables'][
+                    'fx_variables'].values():
+                ancestors.extend(fx_variable['filenames'])
         super(PreprocessorFile, self).__init__(attributes['filename'],
                                                attributes, ancestors)
-
         self.settings = copy.deepcopy(settings)
         if 'save' not in self.settings:
             self.settings['save'] = {}
         self.settings['save']['filename'] = self.filename
-
-        self.files = [a.filename for a in ancestors or ()]
 
         self._cubes = None
         self._prepared = False

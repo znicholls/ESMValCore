@@ -8,7 +8,6 @@ from copy import deepcopy
 from pprint import pformat
 
 import yaml
-from netCDF4 import Dataset
 
 from . import __version__
 from . import _recipe_checks as check
@@ -24,7 +23,7 @@ from ._data_finder import (
     get_output_file,
     get_statistic_output_file,
 )
-from ._provenance import TrackedFile, get_recipe_provenance
+from ._provenance import get_recipe_provenance
 from ._recipe_checks import RecipeError
 from ._task import DiagnosticTask, TaskSet
 from .cmor.check import CheckLevels
@@ -438,9 +437,8 @@ def _get_fx_files(variable, fx_info, config_user):
                        fx_info['short_name'])
 
     # If frequency = fx, only allow a single file
-    if fx_files:
-        if fx_info['frequency'] == 'fx':
-            fx_files = fx_files[0]
+    if fx_info['frequency'] == 'fx':
+        fx_files = fx_files[:1]
 
     return fx_files, fx_info
 
@@ -477,7 +475,7 @@ def _update_fx_files(step_name, settings, variable, config_user, fx_vars):
             fx_info.update({'short_name': fx_var})
         fx_files, fx_info = _get_fx_files(variable, fx_info, config_user)
         if fx_files:
-            fx_info['filename'] = fx_files
+            fx_info['filenames'] = fx_files
             settings['add_fx_variables']['fx_variables'].update({
                 fx_var: fx_info
             })
@@ -549,19 +547,6 @@ def _update_fx_settings(settings, variable, config_user):
             settings[step_name].pop('fx_variables', None)
 
 
-def _read_attributes(filename):
-    """Read the attributes from a netcdf file."""
-    attributes = {}
-    if not (os.path.exists(filename)
-            and os.path.splitext(filename)[1].lower() == '.nc'):
-        return attributes
-
-    with Dataset(filename, 'r') as dataset:
-        for attr in dataset.ncattrs():
-            attributes[attr] = dataset.getncattr(attr)
-    return attributes
-
-
 def _get_input_files(variable, config_user):
     """Get the input files for a single dataset (locally and via download)."""
     (input_files, dirnames,
@@ -588,11 +573,6 @@ def _get_ancestors(variable, config_user):
                 variable['short_name'], variable['dataset'],
                 '\n'.join(input_files))
     check.data_availability(input_files, variable, dirnames, filenames)
-
-    # Set up provenance tracking
-    for i, filename in enumerate(input_files):
-        attributes = _read_attributes(filename)
-        input_files[i] = TrackedFile(filename, attributes)
 
     return input_files
 
@@ -1154,6 +1134,8 @@ class Recipe:
             required_keys.update({'start_year', 'end_year'})
         for variable in variables:
             _add_extra_facets(variable, self._cfg['extra_facets_dir'])
+            if variable['project'] == 'CMIP5' and 'product' not in variable:
+                variable['product'] = 'output1'
             if 'institute' not in variable:
                 institute = get_institutes(variable)
                 if institute:

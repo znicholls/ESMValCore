@@ -107,7 +107,7 @@ def get_task_provenance(task, recipe_entity):
     return activity
 
 
-class TrackedFile(object):
+class TrackedFile:
     """File with provenance tracking."""
 
     def __init__(self, filename, attributes, ancestors=None):
@@ -184,9 +184,27 @@ class TrackedFile(object):
         attribute_to_authors(self.entity, self.attributes.get('authors', []))
         attribute_to_projects(self.entity, self.attributes.get('projects', []))
 
+    @staticmethod
+    def _read_attributes(filename):
+        """Read attributes from an existing NetCDF file."""
+        attributes = {}
+        if not (os.path.exists(filename)
+                and os.path.splitext(filename)[1].lower() == '.nc'):
+            return attributes
+
+        with Dataset(filename, 'r') as dataset:
+            for attr in dataset.ncattrs():
+                attributes[attr] = dataset.getncattr(attr)
+        return attributes
+
     def _initialize_ancestors(self, activity):
         """Register ancestor files for provenance tracking."""
-        for ancestor in self._ancestors:
+        for i, ancestor in enumerate(self._ancestors):
+            if not isinstance(ancestor, TrackedFile):
+                filename = ancestor
+                attributes = self._read_attributes(filename)
+                ancestor = TrackedFile(filename, attributes)
+                self._ancestors[i] = ancestor
             if ancestor.provenance is None:
                 ancestor.initialize_provenance(activity)
             update_without_duplicating(self.provenance, ancestor.provenance)
