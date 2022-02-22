@@ -9,6 +9,7 @@ import warnings
 import fiona
 import iris
 import numpy as np
+import regionmask
 import shapely
 import shapely.ops
 from dask import array as da
@@ -674,3 +675,137 @@ def _mask_cube(cube, selections):
         for ancillary_variable in cube.ancillary_variables():
             add_ancillary_variable(result, ancillary_variable)
     return result
+
+
+def ar6_regions_statistics(cube, operator):
+    """Compute statistics over AR6 regions.
+
+    TODO:
+        * adapt docstring
+        * add tests
+
+    Parameters
+    ----------
+    cube : iris.cube.Cube
+        Input cube.
+    operator : str
+        Select operator to apply. Available operators: ``'mean'``,
+        ``'median'``, ``'std_dev'``, ``'sum'``, ``'variance'``, ``'min'``,
+        ``'max'``.
+
+    Returns
+    -------
+    iris.cube.Cube
+        Collapsed cube.
+
+    """
+    if operator != 'mean':
+        raise NotImplementedError(
+            f"Operation '{operator}' not yet implemented")
+    # operation = get_iris_analysis_operation(operator)
+    lat_coord = cube.coord('latitude')
+    lon_coord = cube.coord('longitude')
+    lat_dim = cube.coord_dims(lat_coord)[0]
+    lon_dim = cube.coord_dims(lon_coord)[0]
+
+    # Calculate area weights
+    # TODO: Use weights from iris.cube.Cube.cell_measures provided by fx
+    # variables --> needs changes in _recipe.py
+    weights = compute_area_weights(cube)
+
+    # TODO: Reshape cube that lat/lon are last dimensions
+    # TODO: Distinguish between weighted and non-weighted
+    # TODO: Replace lat_dim by region_dim
+    # TODO: only weighted mean supported right now -> support others
+
+    # Transform lat/lon into 1D coordinate
+    new_shape = []
+    for (dim, dim_len) in enumerate(cube.shape):
+        if dim != lon_dim:
+            new_shape.append(dim_len)
+    new_shape[lat_dim] *= lon_coord.shape[0]
+    new_shape = tuple(new_shape)
+    new_cube = iris.cube.Cube(cube.core_data().reshape(new_shape))
+    new_cube.metadata = cube.metadata
+    for coord in cube.coords(dim_coords=True):
+        if coord not in (lat_coord, lon_coord):
+            new_cube.add_dim_coord(coord, cube.coord_dims(coord))
+    for coord in cube.coords(dim_coords=False):
+        coord_dims = cube.coord_dims(coord)
+        if (lat_dim not in coord_dims) and (lon_dim not in coord_dims):
+            new_cube.add_aux_coord(coord, coord_dims)
+    weights_cube = new_cube.copy(weights.reshape(new_shape))
+
+    # Create region coordinate and add it to cube
+    ar6_regions = regionmask.defined_regions.ar6.all
+    ar6_mask = ar6_regions.mask(lon_coord.points, lat_coord.points).values
+    ar6_mask = ar6_mask.reshape(-1)
+    region_coord = iris.coords.AuxCoord(ar6_mask, var_name='region',
+                                        standard_name='region',
+                                        long_name='region', units='no unit',
+                                        attributes={'regions': 'ar6',
+                                                    'subtype': 'all'})
+    new_cube.add_aux_coord(region_coord, lat_dim)
+    weights_cube.add_aux_coord(region_coord, lat_dim)
+
+    # Calculate mean over regions
+    new_cube.data *= weights_cube.data
+    new_cube = new_cube.aggregated_by('region', iris.analysis.SUM)
+    weights_cube = weights_cube.aggregated_by('region', iris.analysis.SUM)
+    new_cube.data /= weights_cube.data
+
+    # Promote region coordinate to dimensional coordinate and remove nans
+    sorted_idx = np.argsort(new_cube.coord('region').points)
+    slices = [slice(None)] * new_cube.ndim
+    slices[lat_dim] = sorted_idx
+    new_cube = new_cube[tuple(slices)]
+    weights_cube = weights_cube[tuple(slices)]
+    if np.isnan(new_cube.coord('region').points).any():
+        slices = [slice(None)] * new_cube.ndim
+        slices[lat_dim] = ~np.isnan(new_cube.coord('region').points)
+        new_cube = new_cube[tuple(slices)]
+        weights_cube = weights_cube[tuple(slices)]
+    new_cube.coord('region').points = new_cube.coord(
+        'region').points.astype(int)
+    weights_cube.coord('region').points = weights_cube.coord(
+        'region').points.astype(int)
+    iris.util.promote_aux_coord_to_dim_coord(new_cube, 'region')
+    iris.util.promote_aux_coord_to_dim_coord(weights_cube, 'region')
+
+    # Add additional aux coords for the regions
+    names = []
+    abbrevs = []
+    lats = []
+    lats_bnds = []
+    lons = []
+    lons_bnds = []
+    for region_idx in new_cube.coord('region').points:
+        names.append(ar6_regions.names[region_idx])
+        abbrevs.append(ar6_regions.abbrevs[region_idx])
+        lats.append(ar6_regions.centroids[region_idx][1])
+        lats_bnds.append([ar6_regions.bounds[region_idx][1],
+                          ar6_regions.bounds[region_idx][3]])
+        lons.append(ar6_regions.centroids[region_idx][0] + 180.0)
+        lons_bnds.append([ar6_regions.bounds[region_idx][0] + 180.0,
+                          ar6_regions.bounds[region_idx][2] + 180.0])
+    name_coord = iris.coords.AuxCoord(names, var_name='region_name',
+                                      long_name='Region name', units='no unit')
+    abbrev_coord = iris.coords.AuxCoord(abbrevs, var_name='region_abbrev',
+                                        long_name='Region abbreviation',
+                                        units='no unit')
+    lat_coord = iris.coords.AuxCoord(lats, bounds=lats_bnds, var_name='lat',
+                                     standard_name='latitude',
+                                     long_name='latitude', units='degrees')
+    lon_coord = iris.coords.AuxCoord(lons, bounds=lons_bnds, var_name='lon',
+                                     standard_name='longitude',
+                                     long_name='longitude', units='degrees')
+    weights_coord = iris.coords.AuxCoord(weights_cube.data, var_name='weight',
+                                         long_name='weight', units='m2',
+                                         attributes={'comment': 'Region area'})
+    new_cube.add_aux_coord(name_coord, lat_dim)
+    new_cube.add_aux_coord(abbrev_coord, lat_dim)
+    new_cube.add_aux_coord(lat_coord, lat_dim)
+    new_cube.add_aux_coord(lon_coord, lat_dim)
+    new_cube.add_aux_coord(weights_coord, np.arange(new_cube.ndim))
+
+    return new_cube

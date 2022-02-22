@@ -12,6 +12,7 @@ from ..cmor.check import cmor_check_data, cmor_check_metadata
 from ..cmor.fix import fix_data, fix_file, fix_metadata
 from ._ancillary_vars import add_fx_variables, remove_fx_variables
 from ._area import (
+    ar6_regions_statistics,
     area_statistics,
     extract_named_regions,
     extract_region,
@@ -131,6 +132,8 @@ __all__ = [
     'extract_volume',
     'extract_trajectory',
     'extract_transect',
+    # Region operations
+    'ar6_regions_statistics',
     # 'average_zone': average_zone,
     # 'cross_section': cross_section,
     'detrend',
