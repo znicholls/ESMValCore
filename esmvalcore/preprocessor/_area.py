@@ -712,6 +712,7 @@ def ar6_regions_statistics(cube, operator):
     # TODO: Use weights from iris.cube.Cube.cell_measures provided by fx
     # variables --> needs changes in _recipe.py
     weights = compute_area_weights(cube)
+    
 
     # TODO: Reshape cube that lat/lon are last dimensions
     # TODO: Distinguish between weighted and non-weighted
