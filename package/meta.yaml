@@ -5,7 +5,7 @@
 # conda build package -c conda-forge
 
 # Package version number
-{% set version = "2.5.0rc3" %}
+{% set version = "2.5.0" %}
 
 package:
   name: esmvalcore
@@ -29,21 +29,21 @@ build:
 requirements:
   build:
     - git
-    - python>=3.7
+    - python>=3.8
     # Normally installed via pip:
     - pytest-runner
     - setuptools_scm
   run:
     # esmvaltool
-    - python>=3.7
-    - iris>=3.1.0
+    - python>=3.8
+    - iris>=3.1.0,<3.2.0
     - python-stratify
     - scipy>=1.6
     # Normally installed via pip:
-    - cftime
+    - cartopy
     - cf-units>=3.0.0
+    - cftime
     - cython  # required by cf-units but not automatically installed
-    - defusedxml  # required by esgf-pyclient
     - esgf-pyclient
     - esmpy!=8.1.0  # see github.com/ESMValGroup/ESMValCore/issues/1208
     - fiona
@@ -53,18 +53,18 @@ requirements:
     - isodate
     - jinja2
     - mpich<3.4  # prevent external build
-    - myproxyclient  # required by esgf-pyclient
     - nc-time-axis
     - nested-lookup
     - netCDF4
     - numpy
+    - pandas
+    - pillow
     - prov
     - psutil
     - pybtex
     - pydot
     - pyyaml
     - requests
-    - requests_cache<0.6  # https://github.com/ESGF/esgf-pyclient/issues/71
     - shapely
     - yamale
 
