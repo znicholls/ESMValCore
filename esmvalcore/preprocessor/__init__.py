@@ -46,6 +46,7 @@ from ._mask import (
 from ._multimodel import ensemble_statistics, multi_model_statistics
 from ._other import clip
 from ._regrid import extract_levels, extract_location, extract_point, regrid
+from ._rolling_window import rolling_window_statistics
 from ._time import (
     annual_statistics,
     anomalies,
@@ -125,6 +126,7 @@ __all__ = [
     'mask_inside_range',
     'mask_outside_range',
     # Other
+    'rolling_window_statistics',
     'clip',
     # Region selection
     'extract_region',
