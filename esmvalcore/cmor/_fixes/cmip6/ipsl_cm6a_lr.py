@@ -54,6 +54,16 @@ class Clcalipso(Fix):
         return CubeList([cube])
 
 
+class Cl(Fix):
+    """Fixes for ``cl``."""
+
+
+Cli = Cl
+
+
+Clw = Cl
+
+
 class Omon(Fix):
     """Fixes for ocean variables."""
 

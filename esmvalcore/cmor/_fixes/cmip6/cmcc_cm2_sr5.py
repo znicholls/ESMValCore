@@ -22,3 +22,9 @@ class Cl(ClFixHybridPressureCoord):
         ps_coord = cube.coord(var_name='ps')
         ps_coord.standard_name = None
         return super().fix_metadata(cubes)
+
+
+Cli = Cl
+
+
+Clw = Cl

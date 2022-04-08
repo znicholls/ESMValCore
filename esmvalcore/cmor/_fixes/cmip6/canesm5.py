@@ -2,6 +2,37 @@
 import dask.array as da
 
 from ..fix import Fix
+from ..common import ClFixHybridPressureCoord
+
+
+class Cl(ClFixHybridPressureCoord):
+    """Fixes for cl."""
+
+    def fix_metadata(self, cubes):
+        """
+        Fix metadata.
+
+        Remove duplicate coordinate.
+
+        Parameters
+        ----------
+        cubes: iris.cube.CubeList
+            Input cubes.
+
+        Returns
+        -------
+        iris.cube.CubeList
+        """
+        for cube in cubes:
+            cube.remove_coord("air_pressure")
+
+        return cubes
+
+
+Cli = Cl
+
+
+Clw = Cl
 
 
 class Co2(Fix):
