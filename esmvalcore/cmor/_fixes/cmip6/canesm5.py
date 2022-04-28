@@ -9,10 +9,9 @@ class Cl(ClFixHybridPressureCoord):
     """Fixes for cl."""
 
     def fix_metadata(self, cubes):
-        """
-        Fix metadata.
+        """Fix metadata.
 
-        Remove duplicate coordinate.
+        Fix standard_name of surface air pressure coordinate.
 
         Parameters
         ----------
@@ -22,11 +21,14 @@ class Cl(ClFixHybridPressureCoord):
         Returns
         -------
         iris.cube.CubeList
+
         """
         for cube in cubes:
-            cube.remove_coord("air_pressure")
+            if cube.coords(var_name='ps'):
+                cube.coord(var_name='ps').standard_name = (
+                    'surface_air_pressure')
 
-        return cubes
+        return super().fix_metadata(cubes)
 
 
 Cli = Cl

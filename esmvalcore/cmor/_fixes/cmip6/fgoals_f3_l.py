@@ -5,17 +5,13 @@ import numpy as np
 
 from esmvalcore.iris_helpers import date2num
 
-from ..common import OceanFixGrid
+from ..common import OceanFixGrid, ClFixHybridPressureCoord
 from ..fix import Fix
 
-Tos = OceanFixGrid
 
+class Amon(Fix):
+    """Fixes for Amon variables."""
 
-Omon = OceanFixGrid
-
-
-class AllVars(Fix):
-    """Fixes for all vars."""
     def fix_metadata(self, cubes):
         """Fix parent time units.
 
@@ -29,9 +25,10 @@ class AllVars(Fix):
         Returns
         -------
         iris.cube.CubeList
+
         """
         for cube in cubes:
-            if cube.attributes['table_id'] == 'Amon':
+            if cube.coords('time'):
                 time = cube.coord('time')
                 if np.any(time.bounds[:-1, 1] != time.bounds[1:, 0]):
                     times = time.units.num2date(time.points)
@@ -49,8 +46,24 @@ class AllVars(Fix):
         return cubes
 
 
+Cl = ClFixHybridPressureCoord
+
+
+Cli = ClFixHybridPressureCoord
+
+
+Clw = ClFixHybridPressureCoord
+
+
+Tos = OceanFixGrid
+
+
+Omon = OceanFixGrid
+
+
 class Sftlf(Fix):
     """Fixes for sftlf."""
+
     def fix_data(self, cube):
         """Fix data.
 
