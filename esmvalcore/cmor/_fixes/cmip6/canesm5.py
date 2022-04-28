@@ -1,8 +1,8 @@
 """Fixes for CanESM5 model."""
 import dask.array as da
 
-from ..fix import Fix
 from ..common import ClFixHybridPressureCoord
+from ..fix import Fix
 
 
 class Cl(ClFixHybridPressureCoord):

@@ -5,7 +5,7 @@ import numpy as np
 
 from esmvalcore.iris_helpers import date2num
 
-from ..common import OceanFixGrid, ClFixHybridPressureCoord
+from ..common import ClFixHybridPressureCoord, OceanFixGrid
 from ..fix import Fix
 
 

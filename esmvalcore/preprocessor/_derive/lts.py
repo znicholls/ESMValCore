@@ -3,6 +3,7 @@
 import logging
 
 import iris
+
 from esmvalcore.iris_helpers import var_name_constraint
 
 from ._baseclass import DerivedVariableBase
