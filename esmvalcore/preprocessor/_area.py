@@ -202,6 +202,7 @@ def compute_area_weights(cube):
     return weights
 
 
+# +
 def area_statistics(cube, operator):
     """Apply a statistical operator in the horizontal direction.
 
@@ -299,6 +300,18 @@ def area_statistics(cube, operator):
 
     if operator_accept_weights(operator):
         result = cube.collapsed(coord_names, operation, weights=grid_areas)
+        # TODO: make discussion, if you take an area-weighted sum, result
+        #       should be unit aware
+#         if operator == "sum":
+#             # will be better ways to do this
+#             assumed_area_unit = "m2"
+#             converter = iris.cube.Cube(np.ones_like(grid_areas), units=assumed_area_unit)
+#             name = result.name()
+#             var_name = result.var_name
+
+#             result = result * converter
+#             result.rename(name)
+#             result.var_name = var_name
     else:
         # Many IRIS analysis functions do not accept weights arguments.
         result = cube.collapsed(coord_names, operation)
@@ -311,6 +324,8 @@ def area_statistics(cube, operator):
         result.data = result.core_data().astype(original_dtype)
     return result
 
+
+# -
 
 def extract_named_regions(cube, regions):
     """Extract a specific named region.
