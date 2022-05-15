@@ -55,6 +55,7 @@ REQUIREMENTS = {
         'shapely[vectorized]',
         'stratify',
         'yamale',
+        'colorlog',
     ],
     # Test dependencies
     # Execute 'python setup.py test' to run tests

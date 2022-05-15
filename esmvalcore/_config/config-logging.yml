@@ -5,7 +5,10 @@ version: 1
 disable_existing_loggers: false
 formatters:
   console:
-    format: '%(asctime)s UTC [%(process)d] %(levelname)-7s %(message)s'
+    format: '%(asctime)s UTC [%(process)d] %(levelname)-7s %(name)s:%(lineno)s %(message)s'
+  console_colour:
+    class: colorlog.ColoredFormatter
+    format: '%(log_color)s%(asctime)s UTC [%(process)d] %(levelname)-7s %(name)s:%(lineno)s%(reset)s %(message)s'
   brief:
     format: '%(levelname)-7s [%(process)d] %(message)s'
   debug:
@@ -15,6 +18,11 @@ handlers:
     class: logging.StreamHandler
     level: INFO
     formatter: console
+    stream: ext://sys.stdout
+  console_colour:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: console_colour
     stream: ext://sys.stdout
   simple_log_file:
     class: logging.FileHandler
@@ -30,4 +38,5 @@ handlers:
     mode: w
 root:
   level: DEBUG
-  handlers: [console, simple_log_file, debug_log_file]
+#   handlers: [console, simple_log_file, debug_log_file]
+  handlers: [console_colour, simple_log_file, debug_log_file]
