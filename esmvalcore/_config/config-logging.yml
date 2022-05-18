@@ -30,6 +30,12 @@ handlers:
     formatter: brief
     filename: main_log.txt
     mode: w
+  colour_log_file:
+    class: logging.FileHandler
+    level: INFO
+    formatter: console_colour
+    filename: colour_log.txt
+    mode: w
   debug_log_file:
     class: logging.FileHandler
     level: DEBUG
@@ -39,4 +45,5 @@ handlers:
 root:
   level: DEBUG
 #   handlers: [console, simple_log_file, debug_log_file]
-  handlers: [console_colour, simple_log_file, debug_log_file]
+#  handlers: [console_colour, simple_log_file, debug_log_file]
+  handlers: [console_colour, colour_log_file, debug_log_file]
