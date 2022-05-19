@@ -38,6 +38,21 @@ class AllVars(Fix):
                         lon_bnds[-1][-1] = 358.75
                     cube.coord('longitude').bounds = lon_bnds
 
+            if cube.attributes.get('experiment_id', '').startswith("esm-ssp585"):
+                parent_time_units = "parent_time_units"
+                parent_time_units_bad_value = "days since 0421-01-01"
+
+                branch_time_in_parent = "branch_time_in_parent"
+                branch_time_in_parent_bad_value = 60225.0
+                try:
+                    bad_parent_time_units = cube.attributes[parent_time_units] == parent_time_units_bad_value
+                    bad_branch_time_in_parent = cube.attributes[branch_time_in_parent] == branch_time_in_parent_bad_value
+                    if bad_parent_time_units and bad_branch_time_in_parent:
+                        cube.attributes[parent_time_units] = "days since 0001-01-01"
+                        cube.attributes[branch_time_in_parent] = 735110.0
+                except AttributeError:
+                    pass
+
         return cubes
 
 
