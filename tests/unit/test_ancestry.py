@@ -10,14 +10,22 @@ class BaseAncestryChecker(ABC):
     def _project(self):
         pass
 
+    @property
     @abstractmethod
+    def _expected_parent_id_keys(self):
+        pass
+
     def test_get_parent_id_keys(self):
-        assert _get_local_dataset(self._project)._parent_id_keys == self._expected_parent_id_keys
+        assert _get_local_dataset(self._project())._parent_id_keys() == self._expected_parent_id_keys()
 
 
 class TestAncestryCMIP5(BaseAncestryChecker):
-    _expected_parent_id_keys = ("parent_experiment", "parent_experiment_id", "parent_ensemble_member")
-
+    def _expected_parent_id_keys(self):
+        return (
+            "parent_experiment",
+            "parent_experiment_id",
+            "parent_ensemble_member",
+        )
 
     def _project(self):
         return "CMIP5"
