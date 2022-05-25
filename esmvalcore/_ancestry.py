@@ -14,10 +14,33 @@ class LocalDataset(metaclass=ABCMeta):
         """List[str] Attributes which can be used to identify the parent of a dataset"""
 
     def get_parent_ids(self, attrs):
+        """
+        Get parent ids
+
+        Parameters
+        ----------
+        attrs : Dict[str: str]
+            Attributes from which to get parent ids
+
+        Returns
+        -------
+        Dict[str: str]
+            Parent ids, using the keys as they are in the attributes
+        """
         return {
             k: attrs[k].replace(" ", "")
             for k in self._parent_id_keys
         }
+
+    # Next: get_parent_search_ids
+    # Two steps:
+    #   - get_parent_ids_esmvaltool_keys and then join with self's
+    #   - attributes
+
+    # Then: find_parent_files
+    # Use `variable`, replace attributes with results from
+    # get_parent_search_ids then use find_files
+    # Not sure how to then use automated downloads
 
 
 class LocalDatasetCMIP5(LocalDataset):
