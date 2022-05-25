@@ -1,29 +1,42 @@
 """Module for navigating a file's ancestry in the ESMValTool."""
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 
-class LocalDataset(ABC):
+class LocalDataset(metaclass=ABCMeta):
     @property
     @abstractmethod
     def _project(self):
-        pass
+        """str: Name of the project to which this dataset belongs"""
 
     @property
     @abstractmethod
     def _parent_id_keys(self):
-        pass
+        """List[str] Attributes which can be used to identify the parent of a dataset"""
+
+    def get_parent_ids(self, attrs):
+        return {
+            k: attrs[k].replace(" ", "")
+            for k in self._parent_id_keys
+        }
 
 
 class LocalDatasetCMIP5(LocalDataset):
-    def _project(self):
-        "CMIP5"
+    _project = "CMIP5"
+    _parent_id_keys = (
+        "parent_experiment_id",
+        "parent_experiment_rip",
+    )
 
-    def _parent_id_keys(self):
-        return (
-            "parent_experiment",
-            "parent_experiment_id",
-            "parent_ensemble_member",
-        )
+
+class LocalDatasetCMIP6(LocalDataset):
+    _project = "CMIP6"
+    _parent_id_keys = (
+        "parent_activity_id",
+        "parent_experiment_id",
+        "parent_mip_era",
+        "parent_source_id",
+        "parent_variant_label",
+    )
 
 
 def _get_local_dataset(project):
@@ -32,5 +45,8 @@ def _get_local_dataset(project):
     """
     if project == "CMIP5":
         return LocalDatasetCMIP5()
+
+    if project == "CMIP6":
+        return LocalDatasetCMIP6()
 
     raise NotImplementedError(f"No LocalDataset for {project}")
