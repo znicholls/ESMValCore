@@ -1763,6 +1763,7 @@ def test_alias_generation(tmp_path, patched_datafinder, config_user):
 
 
 def test_concatenation(tmp_path, patched_datafinder, config_user):
+    # use something like this as basis for test
     content = dedent("""
         diagnostics:
           diagnostic_name:
