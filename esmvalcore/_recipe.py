@@ -285,6 +285,8 @@ def _get_default_settings(variable, config_user, derive=False):
     fix_dir = os.path.splitext(variable['filename'])[0] + '_fixed'
     settings['fix_file'] = dict(fix)
     settings['fix_file']['output_dir'] = fix_dir
+    # Need something like the above for stitching so that we keep hold of
+    # required input arguments when running in full?
     # Cube fixes
     fix['frequency'] = variable['frequency']
     fix['check_level'] = config_user.get('check_level', CheckLevels.DEFAULT)
@@ -409,6 +411,7 @@ def _search_fx_mip(tables, variable, fx_info, config_user):
 
 def _get_fx_files(variable, fx_info, config_user):
     """Get fx files (searching all possible mips)."""
+    # duplicate this function
     # assemble info from master variable
     var_project = variable['project']
     # check if project in config-developer

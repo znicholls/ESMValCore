@@ -148,7 +148,6 @@ def add_fx_variables(cube, fx_variables, check_level):
     iris.cube.Cube
         Cube with added cell measures or ancillary variables.
     """
-
     if not fx_variables:
         return cube
     for fx_info in fx_variables.values():

@@ -13,7 +13,6 @@ class NoESGFParentError(ValueError):
 
 
 class LocalDataset(metaclass=ABCMeta):
-
     @property
     @abstractmethod
     def _project(self):
@@ -24,6 +23,13 @@ class LocalDataset(metaclass=ABCMeta):
     def _parent_id_keys(self):
         """List[str] Attributes which can be used to identify the parent of a
         dataset."""
+
+    def get_parent_facets(self):
+        """Get the parent file's facets.
+
+        This method uses the metadata in ``self.cube`` to extract the relevant facets. This metadata can then be used to find the files which make up the parent dataset, using e.g. :func:`get_input_filelist`.
+
+        """
 
     def find_local_parent(self):
         """Find parent files locally.
@@ -104,3 +110,9 @@ def _get_local_dataset(project):
         return LocalDatasetCMIP6()
 
     raise NotImplementedError(f"No LocalDataset for {project}")
+
+
+def find_parent_local(cube, short_name, project, dataset, mip, **extra_facets):
+    """
+
+    """
