@@ -16,6 +16,7 @@ def test_scratch():
 
     res = ParentFinderCMIP6(start).get_parent_metadata()
     res = ParentFinderCMIP6(start).find_local_parent(rootpath, "ESGF")
+    res = ParentFinderCMIP6(start).find_esgf_parent()
     assert False, "make test"
 
 def test_scratch_cmip5():
@@ -24,6 +25,19 @@ def test_scratch_cmip5():
 
     start = iris.load_cube(in_file)
 
+    # For CMIP5 data, you don't have mip info in the files. This is
+    # unworkable when trying to determine parents. Options:
+    # 1. Pass filename in too (perhaps also root and drs) when intialising
+    #    ParentFinder so it can be used to infer info
+    # 2. Pass variable in too when intialising ParentFinder so the info is
+    #    already available
+    # 3. Add such attributes to cubes in pre-processsing so they can be used
+    #    later
+    # Also weird that there is no grid info in the files...
+
+    start.attributes["mip"] = "Amon"
+
     res = ParentFinderCMIP5(start).get_parent_metadata()
     res = ParentFinderCMIP5(start).find_local_parent(rootpath, "ETHZ")
+    res = ParentFinderCMIP5(start).find_esgf_parent()
     assert False, "make test"

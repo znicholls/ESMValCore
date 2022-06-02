@@ -5,6 +5,7 @@ from pathlib import Path
 import iris
 
 from ._data_finder import _find_input_files
+from .esgf._search import cached_search
 
 
 class NoLocalParentError(ValueError):
@@ -150,6 +151,14 @@ class ParentFinder(metaclass=ABCMeta):
         downloaded from ESGF should simply implement this method with
         ``raise NotImplementedError``.
         """
+        parent_metadata = {k: v for k, v in self.get_parent_metadata().items() if v != "*"}
+        res = cached_search(**parent_metadata)
+
+        if not res:
+            error_msg = "something helpful"
+            raise NoESGFParentError(error_msg)
+
+        return res
 
 
 class ParentFinderCMIP5(ParentFinder):
@@ -173,8 +182,9 @@ class ParentFinderCMIP5(ParentFinder):
         ids["ensemble"] = f"r{attrs['realization']}i{attrs['initialization_method']}p{attrs['physics_version']}"
         # info not in data attributes so let it guess
         ids["activity"] = "*"
-        ids["mip"] = "*"
-        ids["grid"] = "*"
+        # Unworkable solution for this really (did CMIP5 have grid labels or did
+        # users just have to work it out?)
+        ids["mip"] = self._cube.attributes["mip"]
 
         return ids
 
