@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import re
 # from pathlib import Path
 
@@ -38,6 +39,21 @@ def test_init_wrong_type(finder, inp):
         finder(inp)
 
 
+class _ParentFinderTester(ABC):
+    @property
+    @abstractmethod
+    def _test_class(self):
+        """:obj:`ParentFinder`: Class to test"""
+
+    @abstractmethod
+    def test_get_parent_metadata(self):
+        # should like something like the below
+        # get mock cube
+        # res = ParentFinder(mock_cube).get_parent_metadata()
+        assert res == exp
+
+class TestParentFinderCMIP6(_ParentFinderTester):
+    _test_class = ParentFinderCMIP6
 
 
 # def test_scratch():

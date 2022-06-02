@@ -1,5 +1,5 @@
 """Module for navigating a file's ancestry in the ESMValTool."""
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 import iris.cube
@@ -18,7 +18,7 @@ class NoESGFParentError(ValueError):
     ESGF."""
 
 
-class ParentFinder(metaclass=ABCMeta):
+class ParentFinder(ABC):
     def __init__(self, cube):
         """
         Class for finding the parents (in the CMIP sense i.e. the experiment
