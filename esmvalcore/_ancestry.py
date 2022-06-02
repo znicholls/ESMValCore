@@ -154,10 +154,29 @@ class ParentFinder(metaclass=ABCMeta):
 
 class ParentFinderCMIP5(ParentFinder):
     _project = "CMIP5"
-    _parent_id_keys = (
-        "parent_experiment",
-        "parent_experiment_rip",
-    )
+    _esmval_map_metadata_keys_parent_info = {
+        "parent_experiment": "exp",
+        "parent_experiment_rip": "ensemble",
+    }
+    _esmval_map_metadata_keys_file_info = {
+        "experiment": "exp",
+        "institute_id": "institute",
+        "model_id": "dataset",
+        "project_id": "project",
+    }
+
+    def _get_esmval_data_ids(self):
+        ids = super()._get_esmval_data_ids()
+        # variable name not in data
+        ids["short_name"] = self._cube.var_name
+        attrs = self._cube.attributes
+        ids["ensemble"] = f"r{attrs['realization']}i{attrs['initialization_method']}p{attrs['physics_version']}"
+        # info not in data attributes so let it guess
+        ids["activity"] = "*"
+        ids["mip"] = "*"
+        ids["grid"] = "*"
+
+        return ids
 
 
 class ParentFinderCMIP6(ParentFinder):

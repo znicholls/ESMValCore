@@ -3,7 +3,7 @@ from pathlib import Path
 import iris
 
 import esmvalcore._config
-from esmvalcore._ancestry import ParentFinderCMIP6
+from esmvalcore._ancestry import ParentFinderCMIP5, ParentFinderCMIP6
 
 CFG_DEVELOPER = esmvalcore._config.read_config_developer_file()
 esmvalcore._config._config.CFG = CFG_DEVELOPER
@@ -16,4 +16,14 @@ def test_scratch():
 
     res = ParentFinderCMIP6(start).get_parent_metadata()
     res = ParentFinderCMIP6(start).find_local_parent(rootpath, "ESGF")
+    assert False, "make test"
+
+def test_scratch_cmip5():
+    rootpath = Path("/Users/znicholls/Documents/AGCEC/netCDF-SCM/netcdf-scm/tests/test-data/marble-cmip5/cmip5/")
+    in_file = "/Users/znicholls/Documents/AGCEC/netCDF-SCM/netcdf-scm/tests/test-data/marble-cmip5/cmip5/rcp45/Amon/tas/NorESM1-M/r1i1p1/tas_Amon_NorESM1-M_rcp45_r1i1p1_200601-230012.nc"
+
+    start = iris.load_cube(in_file)
+
+    res = ParentFinderCMIP5(start).get_parent_metadata()
+    res = ParentFinderCMIP5(start).find_local_parent(rootpath, "ETHZ")
     assert False, "make test"
