@@ -1,5 +1,10 @@
 """Module for navigating a file's ancestry in the ESMValTool."""
 from abc import ABCMeta, abstractmethod
+from pathlib import Path
+
+import iris
+
+from ._data_finder import _find_input_files
 
 
 class NoLocalParentError(ValueError):
@@ -12,7 +17,22 @@ class NoESGFParentError(ValueError):
     ESGF."""
 
 
-class LocalDataset(metaclass=ABCMeta):
+class ParentFinder(metaclass=ABCMeta):
+    def __init__(self, cube):
+        """
+        Class for finding the parents (in the CMIP sense i.e. the experiment
+        from which a given experiment branched) of datasets
+
+        Parameters
+        ----------
+        cube : :obj:`pathlib.Path`
+            Cube containing metadata used for searching etc.
+        """
+        if not isinstance(cube, iris.cube.Cube):
+            raise TypeError("`cube` must be an :obj:`iris.cube.Cube`")
+
+        self._cube = cube
+
     @property
     @abstractmethod
     def _project(self):
@@ -20,19 +40,62 @@ class LocalDataset(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def _parent_id_keys(self):
-        """List[str] Attributes which can be used to identify the parent of a
-        dataset."""
+    def _esmval_map_metadata_keys_parent_info(self):
+        """Dict[str: str] Map from keys in metadata which provide information about the parent to ESMValTool names.
 
-    def get_parent_facets(self):
-        """Get the parent file's facets.
-
-        This method uses the metadata in ``self.cube`` to extract the relevant facets. This metadata can then be used to find the files which make up the parent dataset, using e.g. :func:`get_input_filelist`.
-
+        Keys should appear exactly as they are in the attributes of the
+        datasets, values should follow the ESMValCore internal naming
+        conventions.
         """
 
-    def find_local_parent(self):
+    @property
+    @abstractmethod
+    def _esmval_map_metadata_keys_file_info(self):
+        """Tuple[str] Maximum set of metadata required to uniquely identify a dataset.
+
+        Names should appear exactly as they are in the attributes of the
+        datasets i.e. do not translate to ESMValCore internal naming
+        conventions.
+        """
+
+    def get_parent_metadata(self):
+        """Get the parent file's metadata
+        """
+        parent_metadata = {
+            **self._get_esmval_data_ids(),
+            **self._get_esmval_parent_ids(),
+        }
+
+        return parent_metadata
+
+    def _get_esmval_data_ids(self):
+        out = {
+            esmval_name: self._cube.attributes[k]
+            for k, esmval_name
+            in self._esmval_map_metadata_keys_file_info.items()
+        }
+
+        return out
+
+    def _get_esmval_parent_ids(self):
+        out = {
+            esmval_name: self._cube.attributes[k]
+            for k, esmval_name
+            in self._esmval_map_metadata_keys_parent_info.items()
+        }
+
+        return out
+
+    def find_local_parent(self, rootpath, drs):
         """Find parent files locally.
+
+        Parameters
+        ----------
+        rootpath : :obj:`pathlib.Path`
+            Root path of local files
+
+        drs : str
+            Data reference syntax used for local files
 
         Returns
         -------
@@ -44,6 +107,29 @@ class LocalDataset(metaclass=ABCMeta):
         NoLocalParentError
             No parent files could be found locally
         """
+        parent_metadata = self.get_parent_metadata()
+        parents = self._find_parent_files(parent_metadata, rootpath, drs)
+
+        if not parents:
+            error_msg = "something helpful"
+            raise NoLocalParentError(error_msg)
+
+        return [Path(p) for p in parents]
+
+    def _find_parent_files(self, parent_metadata, rootpath, drs):
+        metadata_in = {
+            # not sure why this original_short_name is needed for file
+            # searching but ok
+            "original_short_name": parent_metadata["short_name"],
+            **parent_metadata,
+        }
+        (res, _, _) = _find_input_files(
+            variable=metadata_in,
+            rootpath={self._project: [rootpath]},
+            drs={self._project: drs},
+        )
+
+        return res
 
     def find_esgf_parent(self):
         """Find parent files on ESGF.
@@ -60,13 +146,13 @@ class LocalDataset(metaclass=ABCMeta):
 
         Notes
         -----
-        Sub-classes of :obj:`LocalDataset` which relate to datasets that cannot be
+        Sub-classes of :obj:`ParentFinder` which relate to datasets that cannot be
         downloaded from ESGF should simply implement this method with
         ``raise NotImplementedError``.
         """
 
 
-class LocalDatasetCMIP5(LocalDataset):
+class ParentFinderCMIP5(ParentFinder):
     _project = "CMIP5"
     _parent_id_keys = (
         "parent_experiment",
@@ -74,19 +160,30 @@ class LocalDatasetCMIP5(LocalDataset):
     )
 
 
-class LocalDatasetCMIP6(LocalDataset):
+class ParentFinderCMIP6(ParentFinder):
     _project = "CMIP6"
-    _parent_id_keys = (
-        "parent_activity_id",
-        "parent_experiment_id",
-        "parent_mip_era",
-        "parent_source_id",
-        "parent_variant_label",
-    )
+    _esmval_map_metadata_keys_parent_info = {
+        "parent_activity_id": "activity",
+        "parent_experiment_id": "exp",
+        "parent_mip_era": "project",
+        "parent_source_id": "dataset",
+        "parent_variant_label": "ensemble",
+    }
+    _esmval_map_metadata_keys_file_info = {
+        "activity_id": "activity",
+        "experiment_id": "exp",
+        "grid_label": "grid",
+        "institution_id": "institute",
+        "mip_era": "project",
+        "source_id": "dataset",
+        "table_id": "mip",
+        "variable_id": "short_name",
+        "variant_label": "ensemble",
+    }
 
 
-def _get_local_dataset(project):
-    """Get an instance of :class:`LocalDataset` for a given project.
+def get_parent_finder(project):
+    """Get an instance of :class:`ParentFinder` for a given project.
 
     Parameters
     ----------
@@ -95,24 +192,18 @@ def _get_local_dataset(project):
 
     Returns
     -------
-    :obj:`LocalDataset`
+    :obj:`ParentFinder`
 
     Raises
     ------
     NotImplementedError
-        There is no implementation of :obj:`LocalDataset` for the requested
+        There is no implementation of :obj:`ParentFinder` for the requested
         project
     """
     if project == "CMIP5":
-        return LocalDatasetCMIP5()
+        return ParentFinderCMIP5()
 
     if project == "CMIP6":
-        return LocalDatasetCMIP6()
+        return ParentFinderCMIP6()
 
-    raise NotImplementedError(f"No LocalDataset for {project}")
-
-
-def find_parent_local(cube, short_name, project, dataset, mip, **extra_facets):
-    """
-
-    """
+    raise NotImplementedError(f"No ParentFinder for {project}")
