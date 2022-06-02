@@ -2,7 +2,7 @@
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
-import iris
+import iris.cube
 
 from ._data_finder import _find_input_files
 from .esgf._search import cached_search
@@ -30,7 +30,8 @@ class ParentFinder(metaclass=ABCMeta):
             Cube containing metadata used for searching etc.
         """
         if not isinstance(cube, iris.cube.Cube):
-            raise TypeError("`cube` must be an :obj:`iris.cube.Cube`")
+            err_msg = f"`cube` must be an :obj:`iris.cube.Cube`, received {type(cube)}"
+            raise TypeError(err_msg)
 
         self._cube = cube
 
