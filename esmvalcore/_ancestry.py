@@ -61,6 +61,11 @@ class ParentFinder(metaclass=ABCMeta):
 
     def get_parent_metadata(self):
         """Get the parent file's metadata
+
+        Returns
+        -------
+        Dict[str: str]
+            Parent metadata, strings follow ESMValTool internal conventions
         """
         parent_metadata = {
             **self._get_esmval_data_ids(),
@@ -173,6 +178,20 @@ class ParentFinderCMIP5(ParentFinder):
         "model_id": "dataset",
         "project_id": "project",
     }
+    """
+    The big issue here is that, for CMIP5 files, there is no way of knowing which mip (here using the ESMValTool meaning i.e. Amon, Omon etc.) the dataset belongs to. The mip is only captured in the filepath, it is not an attribute of the dataset. This is an issue.
+
+    Possible fixes:
+    # 1. Add such attributes to cubes in pre-processsing so they can be used
+    #    later (my preferred as it leaves nice consistent interfaces here)
+    # 2. Pass variable (the ESMValTool internal variable i.e. the thing with
+    #    all the metadata that gets passed around _data_finder) in too when
+    #    intialising ParentFinder so the info is already available. My issue
+    #    with this setup is that you have to then create variable whenever you
+    #    want to use ParentFinder which might not be ideal in all cases.
+    # 3. Pass the full filepath in (perhaps also root and drs) when intialising
+    #    ParentFinder so it can be used to infer required info
+    """
 
     def _get_esmval_data_ids(self):
         ids = super()._get_esmval_data_ids()
