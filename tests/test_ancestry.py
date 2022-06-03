@@ -118,6 +118,9 @@ class _ParentFinderTester(ABC):
                 mock_get_esmval_data_ids=mock_get_esmval_data_ids,
             )
 
+    def test_find_esgf_parent(self):
+        assert False, "To be written"
+
 
 class FindLocalParentRunner:
     def get_mocks(
