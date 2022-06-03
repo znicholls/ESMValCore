@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 import re
 # from pathlib import Path
 
-# import iris.cube
+import iris.cube
 import pytest
+from unittest.mock import Mock
 
 import esmvalcore._config
 from esmvalcore._ancestry import (
@@ -49,11 +50,89 @@ class _ParentFinderTester(ABC):
     def test_get_parent_metadata(self):
         # should like something like the below
         # get mock cube
-        # res = ParentFinder(mock_cube).get_parent_metadata()
+        # res = self._test_class(mock_cube).get_parent_metadata()
         assert res == exp
+
 
 class TestParentFinderCMIP6(_ParentFinderTester):
     _test_class = ParentFinderCMIP6
+
+    def test_get_parent_metadata(self):
+        mock_cube = iris.cube.Cube([0])
+
+        attributes_child = {
+            "hi": "Bye",
+            'activity_id': 'GeoMIP',
+            'experiment_id': 'G6solar',
+            'grid_label': 'gn',
+            'institution_id': 'MOHC',
+            'mip_era': 'CMIP6',
+            'source_id': 'UKESM1-0-LL',
+            'table_id': 'Lmon',
+            'variable_id': 'npp',
+            'variant_label': 'r1i1p1f2',
+            'parent_activity_id': 'ScenarioMIP',
+            'parent_experiment_id': 'ssp585',
+            'parent_mip_era': 'CMIP6',
+            'parent_source_id': 'UKESM1-0-LL',
+            'parent_variant_label': 'r1i1p1f2',
+        }
+        mock_cube.attributes = attributes_child
+
+        exp = {
+            "activity": "ScenarioMIP",
+            'exp': 'ssp585',
+            "grid": "gn",
+            "institute": "MOHC",
+            "project": "CMIP6",
+            "dataset": "UKESM1-0-LL",
+            "mip": "Lmon",
+            "short_name": "npp",
+            "ensemble": "r1i1p1f2",
+        }
+
+        res = self._test_class(mock_cube).get_parent_metadata()
+        assert res == exp
+
+
+class TestParentFinderCMIP5(_ParentFinderTester):
+    _test_class = ParentFinderCMIP5
+
+    def test_get_parent_metadata(self):
+        mock_cube = iris.cube.Cube([0])
+
+        mock_cube.var_name = "tas"
+        attributes_child = {
+            "hi": "Bye",
+            'experiment': 'rcp45',
+            "initialization_method": 1,
+            'institute_id': 'NCC',
+            "model_id": "NorESM1-M",
+            "physics_version": 1,
+            'project_id': 'CMIP5',
+            "realization": 1,
+            'parent_experiment': 'historical',
+            'parent_experiment_rip': 'r1i1p1',
+        }
+        # depends on how we want to keep this information around for downstream
+        # users, see previous discussions
+        attributes_child["mip"] = "Amon"
+
+        mock_cube.attributes = attributes_child
+
+        exp = {
+            'exp': 'historical',
+            "institute": "NCC",
+            "project": "CMIP5",
+            "dataset": "NorESM1-M",
+            "short_name": "tas",
+            "ensemble": "r1i1p1",
+            "mip": "Amon",
+        }
+
+        res = self._test_class(mock_cube).get_parent_metadata()
+        assert res == exp
+
 
 
 # def test_scratch():

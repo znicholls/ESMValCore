@@ -199,9 +199,10 @@ class ParentFinderCMIP5(ParentFinder):
         # variable name not in data
         ids["short_name"] = self._cube.var_name
         attrs = self._cube.attributes
-        ids["ensemble"] = f"r{attrs['realization']}i{attrs['initialization_method']}p{attrs['physics_version']}"
-        # info not in data attributes so let it guess
-        ids["activity"] = "*"
+        ids["ensemble"] = (
+            "r{realization}i{initialization_method}p{physics_version}"
+            .format(**attrs)
+        )
         # Unworkable solution for this really (did CMIP5 have grid labels or did
         # users just have to work it out?)
         ids["mip"] = self._cube.attributes["mip"]
