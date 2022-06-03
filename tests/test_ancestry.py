@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
 import re
-# from pathlib import Path
+from abc import ABC, abstractmethod
+from pathlib import Path
 
 import iris.cube
 import pytest
-from unittest.mock import Mock
+from unittest import mock
 
 import esmvalcore._config
 from esmvalcore._ancestry import (
@@ -53,12 +53,51 @@ class _ParentFinderTester(ABC):
         # res = self._test_class(mock_cube).get_parent_metadata()
         assert res == exp
 
+    @staticmethod
+    def _mock_cube():
+        return iris.cube.Cube([0])
+
+    def _local_parent_setup(self, get_parent_metadata_return_value, _find_parent_files_return_value):
+        mock_cube = iris.cube.Cube([0])
+
+        mock_get_parent_metadata = mock.Mock(return_value=get_parent_metadata_return_value)
+        mock_find_parent_files = mock.Mock(return_value=_find_parent_files_return_value)
+
+        return mock_cube, mock_get_parent_metadata, mock_find_parent_files
+
+    def test_find_local_parent(self):
+        # TODO: work out how to do integration test for this
+        rootpath = Path("/here/there")
+        drs = "ESGF"
+
+        get_parent_metadata_return_value = "parent_metadata"
+        _find_parent_files_return_value = ["a", "b", "/c/d"]
+        mock_cube, mock_get_parent_metadata, mock_find_parent_files = self._local_parent_setup(
+            get_parent_metadata_return_value,
+            _find_parent_files_return_value,
+        )
+
+        with mock.patch.multiple(
+            self._test_class,
+            get_parent_metadata=mock_get_parent_metadata,
+            _find_parent_files=mock_find_parent_files,
+        ):
+            res = self._test_class(self._mock_cube()).find_local_parent(rootpath, drs)
+
+        mock_get_parent_metadata.assert_called_once()
+        mock_find_parent_files.assert_called_once_with(
+            get_parent_metadata_return_value,
+            rootpath,
+            drs,
+        )
+        assert res == [Path(v) for v in _find_parent_files_return_value]
+
 
 class TestParentFinderCMIP6(_ParentFinderTester):
     _test_class = ParentFinderCMIP6
 
     def test_get_parent_metadata(self):
-        mock_cube = iris.cube.Cube([0])
+        mock_cube = self._mock_cube()
 
         attributes_child = {
             "hi": "Bye",
