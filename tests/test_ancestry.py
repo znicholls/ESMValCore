@@ -8,9 +8,10 @@ from unittest import mock
 
 import esmvalcore._config
 from esmvalcore._ancestry import (
+    NoLocalParentError,
     ParentFinder,
     ParentFinderCMIP5,
-    ParentFinderCMIP6
+    ParentFinderCMIP6,
 )
 
 # read developer file so drs works
@@ -57,32 +58,26 @@ class _ParentFinderTester(ABC):
     def _mock_cube():
         return iris.cube.Cube([0])
 
-    def _local_parent_setup(self, get_parent_metadata_return_value, _find_parent_files_return_value):
-        mock_cube = iris.cube.Cube([0])
-
-        mock_get_parent_metadata = mock.Mock(return_value=get_parent_metadata_return_value)
-        mock_find_parent_files = mock.Mock(return_value=_find_parent_files_return_value)
-
-        return mock_cube, mock_get_parent_metadata, mock_find_parent_files
-
     def test_find_local_parent(self):
         # TODO: work out how to do integration test for this
         rootpath = Path("/here/there")
         drs = "ESGF"
-
         get_parent_metadata_return_value = "parent_metadata"
         _find_parent_files_return_value = ["a", "b", "/c/d"]
-        mock_cube, mock_get_parent_metadata, mock_find_parent_files = self._local_parent_setup(
+
+        runner = FindLocalParentRunner()
+        mock_get_parent_metadata, mock_find_parent_files = runner.get_mocks(
             get_parent_metadata_return_value,
             _find_parent_files_return_value,
         )
 
-        with mock.patch.multiple(
-            self._test_class,
-            get_parent_metadata=mock_get_parent_metadata,
-            _find_parent_files=mock_find_parent_files,
-        ):
-            res = self._test_class(self._mock_cube()).find_local_parent(rootpath, drs)
+        res = runner.run_find_local_parent_call(
+            self,
+            mock_get_parent_metadata,
+            mock_find_parent_files,
+            rootpath,
+            drs,
+        )
 
         mock_get_parent_metadata.assert_called_once()
         mock_find_parent_files.assert_called_once_with(
@@ -91,6 +86,63 @@ class _ParentFinderTester(ABC):
             drs,
         )
         assert res == [Path(v) for v in _find_parent_files_return_value]
+
+    def test_find_local_parent_no_found_files(self):
+        # TODO: work out how to do integration test for this
+        rootpath = Path("/here/there")
+        drs = "ESGF"
+        get_parent_metadata_return_value = "parent_metadata"
+        _find_parent_files_return_value = []
+        esmval_ids = {"this": "that"}
+
+        runner = FindLocalParentRunner()
+        mock_get_parent_metadata, mock_find_parent_files = runner.get_mocks(
+            get_parent_metadata_return_value,
+            _find_parent_files_return_value,
+        )
+
+        err_msg = re.escape(
+            f"Could not find parents for {esmval_ids}, we searched in "
+            f"rootpath `{rootpath}` with drs `{drs}` for "
+            f"{get_parent_metadata_return_value}"
+        )
+        with pytest.raises(NoLocalParentError, match=err_msg):
+            runner.run_find_local_parent_call(
+                self,
+                mock_get_parent_metadata,
+                mock_find_parent_files,
+                rootpath,
+                drs,
+            )
+
+
+class FindLocalParentRunner:
+    def get_mocks(self, get_parent_metadata_return_value, _find_parent_files_return_value):
+        mock_get_parent_metadata = mock.Mock(return_value=get_parent_metadata_return_value)
+        mock_find_parent_files = mock.Mock(return_value=_find_parent_files_return_value)
+
+        return mock_get_parent_metadata, mock_find_parent_files
+
+    def run_find_local_parent_call(
+        self,
+        parent_finder_tester,
+        mock_get_parent_metadata,
+        mock_find_parent_files,
+        rootpath,
+        drs,
+    ):
+        with mock.patch.multiple(
+            parent_finder_tester._test_class,
+            get_parent_metadata=mock_get_parent_metadata,
+            _find_parent_files=mock_find_parent_files,
+        ):
+            res = (
+                parent_finder_tester
+                ._test_class(parent_finder_tester._mock_cube())
+                .find_local_parent(rootpath, drs)
+            )
+
+        return res
 
 
 class TestParentFinderCMIP6(_ParentFinderTester):

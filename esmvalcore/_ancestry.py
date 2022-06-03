@@ -116,7 +116,6 @@ class ParentFinder(ABC):
         """
         parent_metadata = self.get_parent_metadata()
         parents = self._find_parent_files(parent_metadata, rootpath, drs)
-
         if not parents:
             error_msg = "something helpful"
             raise NoLocalParentError(error_msg)
