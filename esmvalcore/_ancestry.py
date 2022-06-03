@@ -117,7 +117,11 @@ class ParentFinder(ABC):
         parent_metadata = self.get_parent_metadata()
         parents = self._find_parent_files(parent_metadata, rootpath, drs)
         if not parents:
-            error_msg = "something helpful"
+            error_msg = (
+                f"Could not find parents for {self._get_esmval_data_ids()}, "
+                f"we searched in rootpath `{rootpath}` with drs `{drs}` "
+                f"for {parent_metadata}"
+            )
             raise NoLocalParentError(error_msg)
 
         return [Path(p) for p in parents]

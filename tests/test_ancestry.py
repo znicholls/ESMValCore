@@ -73,10 +73,10 @@ class _ParentFinderTester(ABC):
 
         res = runner.run_find_local_parent_call(
             self,
-            mock_get_parent_metadata,
-            mock_find_parent_files,
             rootpath,
             drs,
+            mock_get_parent_metadata,
+            mock_find_parent_files,
         )
 
         mock_get_parent_metadata.assert_called_once()
@@ -100,6 +100,7 @@ class _ParentFinderTester(ABC):
             get_parent_metadata_return_value,
             _find_parent_files_return_value,
         )
+        mock_get_esmval_data_ids = mock.Mock(return_value=esmval_ids)
 
         err_msg = re.escape(
             f"Could not find parents for {esmval_ids}, we searched in "
@@ -109,10 +110,11 @@ class _ParentFinderTester(ABC):
         with pytest.raises(NoLocalParentError, match=err_msg):
             runner.run_find_local_parent_call(
                 self,
-                mock_get_parent_metadata,
-                mock_find_parent_files,
                 rootpath,
                 drs,
+                mock_get_parent_metadata,
+                mock_find_parent_files,
+                mock_get_esmval_data_ids=mock_get_esmval_data_ids,
             )
 
 
@@ -126,15 +128,17 @@ class FindLocalParentRunner:
     def run_find_local_parent_call(
         self,
         parent_finder_tester,
-        mock_get_parent_metadata,
-        mock_find_parent_files,
         rootpath,
         drs,
+        mock_get_parent_metadata,
+        mock_find_parent_files,
+        mock_get_esmval_data_ids=None,
     ):
         with mock.patch.multiple(
             parent_finder_tester._test_class,
             get_parent_metadata=mock_get_parent_metadata,
             _find_parent_files=mock_find_parent_files,
+            _get_esmval_data_ids=mock_get_esmval_data_ids,
         ):
             res = (
                 parent_finder_tester
