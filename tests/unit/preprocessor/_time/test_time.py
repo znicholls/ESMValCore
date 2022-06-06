@@ -627,6 +627,25 @@ class TestClimatology(tests.Test):
         expected = np.array([1., 1., 1.], dtype=np.float32)
         assert_array_equal(result.data, expected)
 
+    def test_season_climatology_uneven(self):
+        """Test for seasonal avg of an uneven time axis."""
+        data = np.array([0., 1., 2., 2.5, 4., 5.], dtype=np.float32)
+        times = np.array([15, 45, 74, 105, 135, 166])
+        bounds = np.array([[0, 31], [31, 59], [59, 90], [90, 120], [120, 151],
+                           [151, 181]])
+        cube = self._create_cube(data, times, bounds)
+
+        result = climate_statistics(cube, operator='mean', period='season')
+        expected = np.array(
+            [
+                np.average([0, 1], weights=[31, 28]),
+                np.average([2, 2.5, 4], weights=[31, 30, 31]),
+                5,
+            ],
+            dtype=np.float32
+        )
+        assert_array_equal(result.data, expected)
+
     def test_custom_season_climatology(self):
         """Test for time avg of a realisitc time axis and 365 day calendar."""
         data = np.array([1., 1., 1., 1., 1., 1., 1., 1.], dtype=np.float32)
